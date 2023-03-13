@@ -20,3 +20,4 @@ npm-debug.log
 typings
 yarn.lock
 .DS_Store
+.env
