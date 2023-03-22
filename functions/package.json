@@ -22,6 +22,7 @@
     "firebase-admin": "^11.5.0",
     "firebase-auth": "^0.1.2",
     "firebase-functions": "^4.2.0",
+    "random-word-wikipedia": "^1.1.0",
     "ts-dotenv": "^0.9.1"
   },
   "devDependencies": {
