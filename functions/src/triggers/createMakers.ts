@@ -8,7 +8,39 @@ interface Coordinates {
     longitude: number;
 }
 
+interface Maker {
+    latitude: string;
+    longitude: string;
+    genre: string;
+    country: string;
+    createdAt: admin.firestore.Timestamp;
+}
+
+interface LocationData {
+    place_id: number;
+    licence: string;
+    osm_type: string;
+    osm_id: number;
+    lat: string;
+    lon: string;
+    display_name: string;
+    address: {
+        neighbourhood: string;
+        suburb: string;
+        city: string;
+        province: string;
+        ISO3166_2_lvl4: string;
+        postcode: string;
+        country?: string;
+        country_code: string;
+    };
+    boundingbox: [string, string, string, string];
+}
+
+const collectionRef = db.collection("markers");
+
 export const trigger = async () => {
+
     const latLng = _getRandomLatLng();
 
     console.log('ランダムな緯度:', latLng.latitude);
@@ -28,26 +60,46 @@ export const trigger = async () => {
             }
         });
 
+        const data = response.data as LocationData;
+
         const genre = _getRandomGenre();
         console.log('ジャンル:', genre);
+
+        if (data.address == null || data.address.country == null || data.lat == null || data.lon == null) {
+            return;
+        }
+
         // 保存するデータを作成
-        const dataToSave = {
-            latitude: response.data.lat,
-            longitude: response.data.lon,
+        const dataToSave: Maker = {
+            latitude: data.lat,
+            longitude: data.lon,
             genre: genre,
-            display_name: response.data.display_name,
-            country: response.data.address.country,
+            country: data.address.country,
             createdAt: admin.firestore.Timestamp.now(),
         };
 
         // Firestoreにデータを保存
         await _saveToFirestore(dataToSave);
 
+        const collectionLength = await collectionRef.count().get();
+
+        if (collectionLength.data().count > 100) {
+            const querySnapshot = await collectionRef
+                .orderBy("createdAt", "asc")
+                .limit(1)
+                .get();
+
+            if (!querySnapshot.empty) {
+                const oldestDoc = querySnapshot.docs[0];
+                await collectionRef.doc(oldestDoc.id).delete();
+                console.log(`Deleted the oldest document with ID: ${oldestDoc.id}`);
+            }
+        }
+
     } catch (error) {
         console.error('エラーが発生しました:', error);
     }
 };
-
 
 function _getRandomLatLng(): Coordinates {
     const minLatitude = -90;
@@ -64,23 +116,17 @@ function _sleep(ms: number): Promise<void> {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-async function _saveToFirestore(data: any): Promise<void> {
+async function _saveToFirestore(data: Maker): Promise<void> {
     try {
-        const docRef = await db.collection("makers").add(data);
+        const docRef = await collectionRef.add(data);
         console.log("Document successfully written with ID: ", docRef.id);
     } catch (error) {
         console.error("Error adding document: ", error);
     }
 }
 
+const genres = ['純文学', '大衆文学', 'ミステリー小説', 'ハードボイルド小説', '恋愛小説', '青春小説', '官能小説', 'BL小説', 'SF小説', 'ファンタジー小説', 'ホラー小説', 'ライトノベル', 'なろう系小説', '異世界転生小説', '時代・歴史小説', 'ノンフィクション小説', 'コメディ小説',];
 // TODO: Firestoreからジャンルを取得するよう変更する
 function _getRandomGenre(): string {
-    const genres = ['純文学', '大衆文学', 'ミステリー小説', 'ハードボイルド小説', '恋愛小説', '青春小説', '官能小説', 'BL小説', 'SF小説', 'ファンタジー小説', 'ホラー小説', 'ライトノベル', 'なろう系小説', '異世界転生小説', '時代・歴史小説', 'ノンフィクション小説', 'コメディ小説',];
-
-    const minInt = Math.ceil(1);
-    const maxInt = Math.floor(genres.length);
-    const randomNum = Math.floor(Math.random() * (maxInt - minInt + 1));
-
-    return genres[randomNum];
-
+    return genres[Math.floor(Math.random() * (Math.floor(genres.length) - Math.ceil(1) + 1))];
 }

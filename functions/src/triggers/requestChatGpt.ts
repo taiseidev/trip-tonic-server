@@ -1,22 +1,20 @@
 /* eslint-disable */
 import * as dotenv from 'dotenv'
-dotenv.config()
 import axios from "axios";
 import { functions, admin } from '../firebase';
 
+dotenv.config()
 const db = admin.firestore();
 
 export const trigger = async (req: functions.https.Request, res: functions.Response<any>) => {
+    const apiKey = process.env.NEXT_PUBLIC_CHAT_GPT_API_KEY;
+    const location = req.query.location;
+    const character = req.query.character;
+    const collectionRef = db.collection("words");
+    const words: any[] = [];
+
     try {
-        const apiKey = process.env.NEXT_PUBLIC_CHAT_GPT_API_KEY;
-        const location = req.query.location;
-        const character = req.query.character;
-
-        const collectionRef = db.collection("words");
-
         const querySnapshot = await collectionRef.get();
-        const words: any[] = [];
-
         querySnapshot.forEach((doc) => {
             words.push({
                 id: doc.id,
