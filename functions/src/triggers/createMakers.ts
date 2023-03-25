@@ -9,8 +9,8 @@ interface Coordinates {
 }
 
 interface Maker {
-    latitude: string;
-    longitude: string;
+    latitude: number;
+    longitude: number;
     genre: string;
     country: string;
     createdAt: admin.firestore.Timestamp;
@@ -71,8 +71,8 @@ export const trigger = async () => {
 
         // 保存するデータを作成
         const dataToSave: Maker = {
-            latitude: data.lat,
-            longitude: data.lon,
+            latitude: Number(data.lat),
+            longitude: Number(data.lon),
             genre: genre,
             country: data.address.country,
             createdAt: admin.firestore.Timestamp.now(),
@@ -117,9 +117,10 @@ function _sleep(ms: number): Promise<void> {
 }
 
 async function _saveToFirestore(data: Maker): Promise<void> {
+    const doc = collectionRef.doc();
+
     try {
-        const docRef = await collectionRef.add(data);
-        console.log("Document successfully written with ID: ", docRef.id);
+        await doc.set({ ...data, id: doc.id });
     } catch (error) {
         console.error("Error adding document: ", error);
     }
