@@ -76,7 +76,7 @@ export const onHttps = (handlerFileName: string) => {
 };
 
 export const onRun = (handlerFileName: string) => {
-    return functions.region("asia-northeast1").pubsub.schedule('every 3 minutes').onRun(async (_) => {
+    return functions.region("asia-northeast1").pubsub.schedule('every 30 minutes').onRun(async (_) => {
         const handler = await getHandler(handlerFileName);
         return handler.trigger();
     })
