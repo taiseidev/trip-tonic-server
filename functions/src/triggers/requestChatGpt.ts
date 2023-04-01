@@ -1,58 +1,105 @@
 /* eslint-disable */
 import * as dotenv from 'dotenv'
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { functions } from '../firebase';
 
 dotenv.config()
-// const db = admin.firestore();
+
+const apiKey = process.env.NEXT_PUBLIC_CHAT_GPT_API_KEY;
+const responseType = "json";
+const apiUrl = "https://api.openai.com/v1/chat";
+const endPoint = "/completions";
+
+const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
+};
+
+const initPrompt = `
+# ゴール
+あなたは芥川賞や直木賞といった文学賞を受賞するほどの実力を持つ小説家です。
+与えられた情報を元に、誰もが没入できるような小説を作成していください。
+
+# 変数
+[登場人物]：{登場人物の変数(複数指定可能)}
+[キーワード]：ジェラードン
+[ジャンル]：ホラー
+[舞台]：「ジャンル」から連想される場所（ex: 和風ホラー => 日本の不気味な古民家）
+[起承転結]：起承転結は、物語や論説の流れを読み手にわかりやすく伝えるために重要な役割を果たします。起：物語や論説の最初の部分で、背景や登場人物の紹介、問題提起などが行われます。承：物語や論説の展開部分で、問題が発生し、登場人物がそれに取り組む様子が描かれます。転：物語や論説の展開部分で、物語や論説が一変し、新たな展開が生まれます。結：物語や論説の最後の部分で、問題が解決され、結末が描かれます。
+
+[C1]：[キーワード]と[ジャンル]から連想される小説のタイトルを考えてください。
+[C2]：[登場人物]、[キーワード]、[ジャンル]、[舞台]の情報を元に、具体的で想像がつきやすいような小説を作成してください。
+
+# 条件
+小説の出力の形式は4回に分けて行い、[起承転結]がある作品を作成します。今回の出力では[起承転結]の[起]の部分の小説を500字程度で作成してください。
+
+> Run commands [C1] [C2]
+`;
+
+// 過去の会話履歴を保存する配列
+let conversationHistory: IMessage[] = [];
+
+interface IMessage {
+    role: string;
+    content: string;
+}
+
+const apiClient = axios.create({
+    baseURL: apiUrl,
+    responseType: responseType,
+    headers: headers,
+});
+
+// メッセージを追加するメソッド
+function addMessage(role: string, content: string): void {
+    conversationHistory.push({ role, content });
+}
+
+// ChatGPTのAPIを叩くメソッド
+async function callChatGPT(): Promise<string> {
+    try {
+        const response: AxiosResponse = await apiClient.post(endPoint, {
+            "model": "gpt-3.5-turbo",
+            "messages": conversationHistory,
+        });
+
+        const generatedText = response.data.choices[0].message.content.trim();
+        return generatedText;
+    } catch (error) {
+        console.error("Error calling ChatGPT API:", error);
+        throw error;
+    }
+}
+
+// メインの会話関数
+async function chat(inputText: string): Promise<void> {
+    addMessage("user", inputText);
+    const assistantResponse = await callChatGPT();
+    addMessage("assistant", assistantResponse);
+}
+
+// 文章を整形するメソッド
+function formatContent(): string {
+    let content: string = "";
+    for (var i = 0; i < conversationHistory.length; i++) {
+        if (isOdd(i)) {
+            content = conversationHistory[i].content + "\n\n";
+        }
+    }
+    return content;
+}
+
+// 奇数かどうか
+function isOdd(number: number): boolean {
+    return number % 2 !== 0;
+}
+
 
 export const trigger = async (req: functions.https.Request, res: functions.Response<any>) => {
-    const apiKey = process.env.NEXT_PUBLIC_CHAT_GPT_API_KEY;
-    const location = req.query.location;
-    const character = req.query.character;
-    // const collectionRef = db.collection("words");
-    // const words: any[] = [];
-
-    try {
-        // const querySnapshot = await collectionRef.get();
-        // querySnapshot.forEach((doc) => {
-        //     words.push({
-        //         id: doc.id,
-        //         word: doc.data()['word'],
-        //     });
-        // });
-
-        // const collectionLength = await collectionRef.count().get();
-
-        // const minInt = Math.ceil(1);
-        // const maxInt = Math.floor(collectionLength.data().count);
-
-        // const randomNum = Math.floor(Math.random() * (maxInt - minInt + 1)) + minInt;
-
-        // functions.logger.info(`🚀${words[randomNum].word}🚀`);
-
-        const apiClient = axios.create({
-            baseURL: "https://api.openai.com/v1/chat",
-            responseType: "json",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`,
-            },
-        });
-
-        const response = await apiClient.post('/completions', {
-            "model": "gpt-3.5-turbo",
-            "messages": [
-                {
-                    "role": "assistant",
-                    "content": `# ゴール\nあなたは芥川賞や直木賞といった文学賞を受賞するほどの実力を持つ小説家です。\n与えられた情報を元に人を惹きつけるような短編小説を書いてください。なお、小説の舞台は${location}で、小説は起承転結の形式で作成してください。\n\n[登場人物]${character}（${character}がundefinedの場合は${location}に縁のある人物を登場人物として登場させてください。）\n\n[キーワード]エルデンリング\n[ジャンル]：純文学、大衆文学 、ミステリー小説、ハードボイルド小説 、恋愛小説 、青春小説 、官能小説 、BL小説 、SF小説 、ファンタジー小説 、ホラー小説 、ライトノベル、なろう系小説 、異世界転生小説 、時代・歴史小説 、ノンフィクション小説 、コメディ小説 \n[C1] = [ジャンル]の中から一つを選択し、[登場人物]を登場させ[キーワード]に沿った小説のタイトルを考えてください。\n[C2] = [C1]のタイトルから想像を膨らませ、で短編小説の本文を完成させてください。なお、文章は必ず完結させ文章量は3000字前後で出力してください。\n\n> Run commands [C1] [C2]\n`,
-                }
-            ]
-        });
-
-        res.status(200).send(response.data);
-    } catch (error: any) {
-        console.error("Error: ", error);
-        res.status(500).send("Error: " + error.message);
-    }
+    await chat(initPrompt);
+    await chat("[起]の続きである[承]を500字程度で作成してください。");
+    await chat("[承]の続きである[転]を500字程度で作成してください。");
+    await chat("[転]の続きである[結]を500字程度で作成してください。");
+    const content = formatContent();
+    res.status(200).send(content);
 };
