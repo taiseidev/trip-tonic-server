@@ -23,7 +23,8 @@ const getHandler = async (handlerFileName: string) => {
 
 const db = functions.region('asia-northeast1').firestore;
 const auth = functions.region('asia-northeast1').auth.user();
-const https = functions.region('asia-northeast1').https;
+// ChatGPTのAPIを叩くためタイムアウト時間を3分に設定
+const https = functions.runWith({ timeoutSeconds: 180 }).region('asia-northeast1').https;
 
 // ユーザ登録時
 export const onRegist = (handlerFileName: string) =>

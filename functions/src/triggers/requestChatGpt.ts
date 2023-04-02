@@ -9,7 +9,6 @@ const apiKey = process.env.NEXT_PUBLIC_CHAT_GPT_API_KEY;
 const responseType = "json";
 const apiUrl = "https://api.openai.com/v1/chat";
 const endPoint = "/completions";
-
 const headers = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${apiKey}`,
@@ -62,7 +61,8 @@ function formatContent(): string {
     let content: string = "";
     for (var i = 0; i < conversationHistory.length; i++) {
         if (isOdd(i)) {
-            content = conversationHistory[i].content + "\n\n";
+            // 結合しなければならないので修正。
+            content = content + conversationHistory[i].content + "\n\n";
         }
     }
     return content;
@@ -83,7 +83,7 @@ function generateInitPrompt(genre: string, keyWord: string, character: string): 
     [登場人物]：${character}
     [キーワード]：${keyWord}
     [ジャンル]：${genre}
-    [舞台]：「ジャンル」から連想される場所（ex: 和風ホラー => 日本の不気味な古民家）
+    [舞台]：「ジャンル」から連想される場所（ex: 和風ホラー => 日本の不気味な古民家、ファンタジー => アイルランドの街並み）
     [起承転結]：起承転結は、物語や論説の流れを読み手にわかりやすく伝えるために重要な役割を果たします。起：物語や論説の最初の部分で、背景や登場人物の紹介、問題提起などが行われます。承：物語や論説の展開部分で、問題が発生し、登場人物がそれに取り組む様子が描かれます。転：物語や論説の展開部分で、物語や論説が一変し、新たな展開が生まれます。結：物語や論説の最後の部分で、問題が解決され、結末が描かれます。
     
     [C1]：[キーワード]と[ジャンル]から連想される小説のタイトルを考えてください。
@@ -98,17 +98,23 @@ function generateInitPrompt(genre: string, keyWord: string, character: string): 
     return initPrompt;
 }
 
+// 一秒間待つ
+async function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export const trigger = async (req: functions.https.Request, res: functions.Response<any>) => {
     // TODO: 型を修正
     const genre: any = req.query.genre;
     const keyWord: any = req.query.keyWord;
     const character: any = req.query.character;
-
     await chat(generateInitPrompt(genre, keyWord, character));
+    await delay(1000);
     await chat("[起]の続きである[承]を500字程度で作成してください。");
+    await delay(1000);
     await chat("[承]の続きである[転]を500字程度で作成してください。");
+    await delay(1000);
     await chat("[転]の続きである[結]を500字程度で作成してください。");
-
     const content = formatContent();
     res.status(200).send(content);
 };
