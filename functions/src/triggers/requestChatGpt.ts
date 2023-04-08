@@ -73,7 +73,7 @@ function isOdd(number: number): boolean {
     return number % 2 !== 0;
 }
 
-function generateInitPrompt(genre: string, keyWord: string, character: string): string {
+function generateInitPrompt(genre: string, keyWord: string, character: string[]): string {
     const initPrompt = `
     # ゴール
     あなたは芥川賞や直木賞といった文学賞を受賞するほどの実力を持つ小説家です。
@@ -90,7 +90,7 @@ function generateInitPrompt(genre: string, keyWord: string, character: string): 
     [C2]：[登場人物]、[キーワード]、[ジャンル]、[舞台]の情報を元に、具体的で想像がつきやすいような小説を作成してください。
     
     # 条件
-    小説の出力の形式は4回に分けて行い、[起承転結]がある作品を作成します。今回の出力では[起承転結]の[起]の部分の小説を500字程度で作成してください。
+    小説の出力の形式は4回に分けて行い、[起承転結]がある作品を作成します。今回の出力では[起承転結]の[起]と[承]の部分の小説を1000字程度で作成してください。
     
     > Run commands [C1] [C2]
     `;
@@ -104,17 +104,16 @@ async function delay(ms: number): Promise<void> {
 }
 
 export const trigger = async (req: functions.https.Request, res: functions.Response<any>) => {
-    // TODO: 型を修正
-    const genre: any = req.query.genre;
-    const keyWord: any = req.query.keyWord;
-    const character: any = req.query.character;
-    await chat(generateInitPrompt(genre, keyWord, character));
+    const genre: any = req.query.genre || '';
+    const keyWord: any = req.query.keyWord || '';
+    // 文字列からリストに変換
+    const characterString: any = req.query.character || '[]';
+    const characters: string[] = JSON.parse(characterString);
+
+    // TODO: 精度が良くないのでプロンプトを修正する
     await delay(1000);
-    await chat("[起]の続きである[承]を500字程度で作成してください。");
-    await delay(1000);
-    await chat("[承]の続きである[転]を500字程度で作成してください。");
-    await delay(1000);
-    await chat("[転]の続きである[結]を500字程度で作成してください。");
+    await chat(generateInitPrompt(genre, keyWord, characters));
+    // await chat("[起]と[承]の続きである[転][結]とを1000字程度で作成してください。");
     const content = formatContent();
     res.status(200).send(content);
 };
