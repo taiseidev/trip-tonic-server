@@ -90,9 +90,14 @@ function generateInitPrompt(genre: string, keyWord: string, character: string[])
     [C2]：[登場人物]、[キーワード]、[ジャンル]、[舞台]の情報を元に、具体的で想像がつきやすいような小説を作成してください。
     
     # 条件
-    小説の出力の形式は4回に分けて行い、[起承転結]がある作品を作成します。今回の出力では[起承転結]の[起]と[承]の部分の小説を1000字程度で作成してください。
+    小説の出力の形式は4回に分けて行い、[起承転結]がある作品を作成します。今回の出力では[起承転結]の[起]の部分の小説を1000字程度で作成してください。
     
-    > Run commands [C1] [C2]
+    # 出力方法
+    以下のような形式で出力してください。
+
+    [C1]
+
+    [C2]（[起承転結]の文言は削除し、小説の内容のみを出力してください。）
     `;
 
     return initPrompt;
@@ -111,9 +116,13 @@ export const trigger = async (req: functions.https.Request, res: functions.Respo
     const characters: string[] = JSON.parse(characterString);
 
     // TODO: 精度が良くないのでプロンプトを修正する
-    await delay(1000);
     await chat(generateInitPrompt(genre, keyWord, characters));
-    // await chat("[起]と[承]の続きである[転][結]とを1000字程度で作成してください。");
+    await delay(1000);
+    await chat("[起]の続きである[承]とを1000字程度で作成してください。");
+    await delay(1000);
+    await chat("[承]の続きである[転]とを1000字程度で作成してください。");
+    await delay(1000);
+    await chat("[転]の続きである[結]とを1000字程度で作成してください。");
     const content = formatContent();
     res.status(200).send(content);
 };
