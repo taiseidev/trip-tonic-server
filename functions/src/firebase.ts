@@ -10,11 +10,13 @@ export type Change = functions.Change<functions.firestore.QueryDocumentSnapshot>
 export type Context = functions.EventContext;
 export type Request = functions.https.Request;
 export type Response = functions.Response;
+export type CallableContext = functions.https.CallableContext;
 
 type SnapshotHandler = { trigger: (snapshot: Snapshot, context: Context) => Promise<unknown> };
 type ChangeHandler = { trigger: (change: Change, context: Context) => Promise<unknown> };
 type UserHandler = { trigger: (change: UserRecord, context: Context) => Promise<unknown> };
 type RequestHandler = { trigger: (req: functions.https.Request, resp: functions.Response<any>) => Promise<void> };
+type CallHandler = { trigger: (data: any, context: CallableContext) => Promise<void> };
 
 const getHandler = async (handlerFileName: string) => {
     const handlerFilePath = `./triggers/${handlerFileName}`;
@@ -83,3 +85,10 @@ export const onRun = (handlerFileName: string) => {
     })
 };
 
+// callable function
+export const onCall = (handlerFileName: string) => {
+    return https.onCall(async (data, context) => {
+        const handler: CallHandler = await getHandler(handlerFileName);
+        return handler.trigger(data, context);
+    });
+};
