@@ -11,7 +11,7 @@ export const trigger = async (snapshot: any, _: CallableContext) => {
     const version: string = snapshot.version;
 
     console.info(`🚀userId: ${userId}`);
-    console.info(`🚀notificationId: ${announcementId}`);
+    console.info(`🚀announcementId: ${announcementId}`);
     console.info(`🚀version: ${version}`);
     try {
         // 運営からのお知らせのリファレンス
